@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -220,18 +221,14 @@ import (
 // }
 
 func main() {
-	// [X] Read secrets.txt
-	// [X] Read api key from secrets.txt
-	// [X] Trim apikey from secrets.txt
-	// [] Hit api route with key from secrets.txt
-	// [] print out response from key with secrets.txt
+
+	// read secrets file for xai key
 	fmt.Println("Hello")
 	content, err := os.ReadFile("secrets.txt")
 	if err != nil {
 		log.Fatal(err)
 	}
 	apiKey := strings.TrimSpace(string(content))
-	fmt.Println(apiKey)
 
 	// set url
 	url := "https://api.x.ai/v1/chat/completions"
@@ -241,11 +238,19 @@ func main() {
 		"messages": [
 			{
 				"role": "user",
-				"content": "What is the meaning of life, the universe, and everything?"
+				"content": "What is the latest crypto news today? And what is today's date? Summarize it all into about 1-2 paragraphs of information"
 			}
 		],
 		"model": "grok-3-latest",
 		"stream": false,
+		"search_parameters": { 
+			"mode":"on",
+			"sources": [
+  				{"type": "web"},
+  				{"type": "x"},
+ 				{"type": "news"}
+			]
+		},
 		"temperature": 0.7
 	}`
 
@@ -279,5 +284,27 @@ func main() {
 	// Print the response status and body
 	fmt.Printf("Response Status: %s\n", resp.Status)
 	fmt.Printf("Response Body: %s\n", string(body))
+
+	// parse data into a map
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		fmt.Printf("Error unmarshalling JSON: %v\n", err)
+	}
+
+	jsonPrettyString, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		fmt.Printf("Error pretty-printing JSON: %v\n", err)
+		return
+	}
+	fmt.Printf("Map as pretty JSON string:\n%s\n", string(jsonPrettyString))
+	fmt.Printf("\n\n\n%s\n", strings.Split(string(jsonPrettyString), "reasoning_content")[0])
+	// old access to content field
+	choices, ok := data["choices"]
+	if !ok {
+		fmt.Println("Error: 'choices' key not found in data")
+		return
+	}
+	// val := strings.Split(string(choicesStr), "reasoning_content")
+	fmt.Printf("\n\n\nContent: %s\n", choices)
 
 }
