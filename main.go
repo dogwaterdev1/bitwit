@@ -1,6 +1,14 @@
 package main
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+)
 
 // A simple example demonstrating the use of multiple text input components
 // from the Bubbles component library.
@@ -212,5 +220,64 @@ import "fmt"
 // }
 
 func main() {
+	// [X] Read secrets.txt
+	// [X] Read api key from secrets.txt
+	// [X] Trim apikey from secrets.txt
+	// [] Hit api route with key from secrets.txt
+	// [] print out response from key with secrets.txt
 	fmt.Println("Hello")
+	content, err := os.ReadFile("secrets.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	apiKey := strings.TrimSpace(string(content))
+	fmt.Println(apiKey)
+
+	// set url
+	url := "https://api.x.ai/v1/chat/completions"
+
+	// Create request payload
+	payload := `{
+		"messages": [
+			{
+				"role": "user",
+				"content": "What is the meaning of life, the universe, and everything?"
+			}
+		],
+		"model": "grok-3-latest",
+		"stream": false,
+		"temperature": 0.7
+	}`
+
+	// create new request
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(payload)))
+	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
+		return
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	// Create an HTTP client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Error reading response: %v\n", err)
+		return
+	}
+
+	// Print the response status and body
+	fmt.Printf("Response Status: %s\n", resp.Status)
+	fmt.Printf("Response Body: %s\n", string(body))
+
 }
